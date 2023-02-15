@@ -1,0 +1,363 @@
+<html>
+<head>
+<title>Part_I_exploration_Final.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #8c8c8c; font-style: italic;}
+.s1 { color: #080808;}
+.s2 { color: #0033b3;}
+.s3 { color: #067d17;}
+.s4 { color: #1750eb;}
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+Part_I_exploration_Final.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% md 
+</span><span class="s1"># Part I - FordGo Bike Sharing System Data 2019 
+## by David Tendai Gondo 
+ 
+## Introduction 
+&gt; This dataset contains data about the individual bike rides people booked in the year 2019 in the area covering San Francisco . We are to visualize the data to get insights on the attributes of people who take longer bike rides to enable a targeted marketing campaign to increase thier numbers. 
+ 
+#### What is the combination of attributes that lead to users who take longer bike rides? 
+ 
+### Univariate Analysis 
+**What is the distribution of the various attributes in the concerned bike ride duration zone** 
+ 
+### Bivariate Analysis 
+**What are the relationships that exists between these attributes** 
+ 
+### Multivariate Analysis 
+**What combination of these attributes make up the desired user persona** 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Preliminary Wrangling 
+</span><span class="s0">#%% 
+# import all packages and set plots to be embedded inline</span>
+<span class="s2">import </span><span class="s1">numpy </span><span class="s2">as </span><span class="s1">np</span>
+<span class="s2">import </span><span class="s1">pandas </span><span class="s2">as </span><span class="s1">pd</span>
+<span class="s2">import </span><span class="s1">matplotlib.pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+<span class="s2">import </span><span class="s1">seaborn </span><span class="s2">as </span><span class="s1">sb</span>
+
+<span class="s1">%matplotlib inline</span>
+<span class="s0">#%% 
+#loading dataset</span>
+<span class="s1">bikes= pd.read_csv(</span><span class="s3">&quot;bike-data.csv&quot;</span><span class="s1">)</span>
+<span class="s1">bikes</span>
+<span class="s0">#%% 
+#High level overview of the data</span>
+<span class="s1">print(bikes.shape)</span>
+<span class="s1">print(bikes.info())</span>
+<span class="s1">print(bikes.isnull().sum())</span>
+
+<span class="s0">#%% md 
+</span><span class="s1">**We wont be using the data in most of the columns with null values.But we will need to use the columns for gender and age.So lets first see if the columns are signficant to the overal dataset** 
+</span><span class="s0">#%% 
+#Calculate percentage of null rows to the overall dataset</span>
+<span class="s1">percentage_of_null = </span><span class="s4">8265</span><span class="s1">/</span><span class="s4">183412 </span><span class="s1">* </span><span class="s4">100</span>
+<span class="s1">percentage_of_null</span>
+<span class="s0">#%% md 
+</span><span class="s1">**They make only 4.5 % of the data so we can delete them. This will prevent bias when we want to see impact of these variables relative to other variable** 
+</span><span class="s0">#%% 
+#Drop all rows without member gender</span>
+<span class="s1">bikes.dropna(axis=</span><span class="s4">0</span><span class="s1">, subset = </span><span class="s3">'member_gender'</span><span class="s1">,inplace = </span><span class="s2">True </span><span class="s1">)</span>
+<span class="s1">bikes</span>
+<span class="s0">#%% 
+#Check again if everything is correct</span>
+<span class="s1">bikes.isnull().sum()</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Now all the rows left have all the data, except for the sation ids, which we will not need since we can use station names to get the same info** 
+</span><span class="s0">#%% 
+#Generate descriptive statistics</span>
+<span class="s1">bikes.describe()</span>
+<span class="s0">#%% md 
+</span><span class="s1">**These are not very useful since most of them cannot be used for any meaningful computation.However The important ones are the duration sec and the date of birth columns.** 
+**We cannot explicitly use the member_birth_year column, but rather the age that we could get from calculating the current age of the bikers** 
+**There are some incorrect data in the member_birth_year column eg the minimum year is 1878, that is unfeasible because it would mean the person was over a 100 years old.So we will turn an data below 5 years and above 90 as zero** 
+</span><span class="s0">#%% 
+#Create column with birth year from the member_birth_year column</span>
+<span class="s1">bikes[</span><span class="s3">'age'</span><span class="s1">] = </span><span class="s4">2019 </span><span class="s1">- bikes[</span><span class="s3">'member_birth_year'</span><span class="s1">]</span>
+<span class="s1">bikes</span>
+<span class="s0">#%% 
+#Convert any age above 90 to zero</span>
+<span class="s1">bikes[</span><span class="s3">'age'</span><span class="s1">].values[bikes[</span><span class="s3">'age'</span><span class="s1">]&gt; </span><span class="s4">90</span><span class="s1">] = </span><span class="s4">0</span>
+<span class="s1">bikes.describe()</span>
+<span class="s0">#%% 
+#Drop the member year column, we will now be using the age column instead</span>
+<span class="s1">bikes.drop([</span><span class="s3">'member_birth_year'</span><span class="s1">],inplace=</span><span class="s2">True</span><span class="s1">,axis=</span><span class="s4">1</span><span class="s1">)</span>
+<span class="s1">bikes</span>
+<span class="s0">#%% md 
+</span><span class="s1">**The co-ordinates columns would require us to know the places from the map, this might be unncessarily cumbersome since we already know the geographic sample of our data.So we can remove this . It might also contribute very little to answering our research question, to substitute for removing, we will keep the station names , they can guide us in a similar direction if we need to** 
+</span><span class="s0">#%% 
+#Drop the co-ordinates columns</span>
+<span class="s1">bikes.drop(inplace=</span><span class="s2">True </span><span class="s1">, columns=([</span><span class="s3">&quot;end_station_latitude&quot;</span><span class="s1">,</span><span class="s3">&quot;start_station_latitude&quot;</span><span class="s1">,</span><span class="s3">&quot;end_station_longitude&quot;</span><span class="s1">,</span><span class="s3">&quot;start_station_longitude&quot;</span><span class="s1">]),axis=</span><span class="s4">1</span><span class="s1">)</span>
+<span class="s1">bikes</span>
+<span class="s0">#%% md 
+</span><span class="s1">### What is the structure of your dataset? 
+The dataset contains details of 175 147 individual bike rides in the Ford Go Bike Sharing System in the area covering San Francisco 
+The data has attributes which give us bike usage insights and user type insights. 
+The start_time , end_time , duration_sec,start_station, end_station and bike_id columns give us usage insights 
+The age, user_type,member_gender and  bike_share_for_all_trip columns give us user attributes insights 
+ 
+### What is/are the main feature(s) of interest in your dataset? 
+ 
+I am interested in identifying the attributes that influence  a longer bike duration time. 
+### What features in the dataset do you think will help support your investigation into your feature(s) of interest? 
+ 
+The user attributes columns will help me to identify the correct combination of attributes that lead to a greater bike duration time .Therefore l am using all user attributes columns to discover out thier influence on a usage attribute : duration time . I anticipate that more younger male customers will have greater  bike duration times 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1"># Univariate Exploration 
+**I will start by exploring the distribution and structure of user attributes for users with a greater trip duration time** 
+</span><span class="s0">#%% md 
+</span><span class="s1">### In this section we want to see how the user attributes look like in the concerned ride duration range 
+</span><span class="s0">#%% md 
+</span><span class="s1">#### Question 1a 
+**What is the distribution of trip duration among our users** 
+</span><span class="s0">#%% md 
+</span><span class="s1">Since this is numerical data over a large range, first look at the descriptive statistics to see where to put the graph limits and what things to look out for 
+</span><span class="s0">#%% 
+#Generate descriptive statistics of duration_sec</span>
+<span class="s1">bikes[</span><span class="s3">'duration_sec'</span><span class="s1">].describe()</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+From this we see that the difference between the minimum time(61seconds) and the maximum time(84548) is very big.So l expect the graph scale to be very long.Also the 75th percentile is 789, which is also the mean, this might result in most of the data clumped up on the smaller range and a larger empty space with few users 
+</span><span class="s0">#%% 
+#Create a histogram to see the frequency distribution time duration among users</span>
+<span class="s1">bins = np.arange(</span><span class="s4">60</span><span class="s1">, bikes[</span><span class="s3">'duration_sec'</span><span class="s1">].max()+</span><span class="s4">5</span><span class="s1">, </span><span class="s4">300</span><span class="s1">)</span>
+<span class="s1">sb.histplot(data=bikes,x=</span><span class="s3">'duration_sec'</span><span class="s1">, bins=bins,kde=</span><span class="s2">True</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Most of the users are concentrated below 1000 seconds. We have very few extreme outliers almost to none 
+</span><span class="s0">#%% 
+##Plot the time duration with a limit on 5000 where the graph seems to start to flatten</span>
+<span class="s1">bins = np.arange(</span><span class="s4">60</span><span class="s1">, bikes[</span><span class="s3">'duration_sec'</span><span class="s1">].max()+</span><span class="s4">5</span><span class="s1">, </span><span class="s4">300</span><span class="s1">)</span>
+<span class="s1">sb.histplot(data=bikes,x=</span><span class="s3">'duration_sec'</span><span class="s1">, bins=bins,kde=</span><span class="s2">True</span><span class="s1">).set(title=</span><span class="s3">&quot;User Duration Time Distribution&quot;</span><span class="s1">)</span>
+<span class="s1">plt.xlim(</span><span class="s4">0</span><span class="s1">,</span><span class="s4">5000</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Most users takes trips betweeb 300 to 400 seconds 
+</span><span class="s0">#%% 
+#Plot the remaining outliers to see significance</span>
+<span class="s1">bins = np.arange(</span><span class="s4">60</span><span class="s1">, bikes[</span><span class="s3">'duration_sec'</span><span class="s1">].max()+</span><span class="s4">5</span><span class="s1">, </span><span class="s4">300</span><span class="s1">)</span>
+<span class="s1">sb.histplot(data=bikes,x=</span><span class="s3">'duration_sec'</span><span class="s1">, bins=bins,kde=</span><span class="s2">True</span><span class="s1">).set(title=</span><span class="s3">&quot;User Duration Time Distribution-Outliers&quot;</span><span class="s1">)</span>
+<span class="s1">plt.xlim(</span><span class="s4">5000</span><span class="s1">,</span><span class="s4">85000</span><span class="s1">)</span>
+<span class="s1">plt.ylim(</span><span class="s4">0</span><span class="s1">,</span><span class="s4">80</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+The number of people taking longer trips starts being very small above 20 000 seconds 
+From the twon graphs , it is observed that the number of people start to decrease signficantly above 3000 seconds. We are to identify the common attributes of users in this time duration range and give recommendations to the business for targeted marketing to current or potential customers so as to increase thier numbers 
+</span><span class="s0">#%% 
+#Create a new dataframe with people who take bike rides above 3000 seconds</span>
+<span class="s1">df = bikes.loc[bikes[</span><span class="s3">'duration_sec'</span><span class="s1">]&gt;= </span><span class="s4">3000</span><span class="s1">]</span>
+<span class="s0">#Create a dataframe for users below this range incase we need to compare some results at some point</span>
+<span class="s1">df2 = bikes.loc[bikes[</span><span class="s3">'duration_sec'</span><span class="s1">] &lt; </span><span class="s4">3000</span><span class="s1">]</span>
+<span class="s1">df</span>
+<span class="s0">#%% md 
+</span><span class="s1">#### Question 
+What is the composition of our user base along the common user attributes 
+</span><span class="s0">#%% 
+#Create a bar chart to see the composition of our user bases</span>
+<span class="s1">fig , ax =plt.subplots(</span><span class="s4">1</span><span class="s1">,</span><span class="s4">2 </span><span class="s1">,figsize=(</span><span class="s4">7</span><span class="s1">,</span><span class="s4">5</span><span class="s1">))</span>
+<span class="s1">fig.tight_layout()</span>
+<span class="s1">sb.countplot(x = df[</span><span class="s3">'user_type'</span><span class="s1">], ax=ax[</span><span class="s4">0</span><span class="s1">]).set(title=</span><span class="s3">&quot;User Type Distribution&quot;</span><span class="s1">)</span>
+<span class="s1">sb.countplot(x= df[</span><span class="s3">'member_gender'</span><span class="s1">], ax=ax[</span><span class="s4">1</span><span class="s1">]).set(title=</span><span class="s3">&quot;User Gender Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">##### Observation 
+**There are more subscribers who take longer rides than customers.However the difference isnt signficantly large.** 
+**As anticipated we have more males than females. The other gender might be for people who are non-binary.That still holds the  smallest of our user population** 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1">#### Question 
+**What  is the age distribution of our users ?** 
+</span><span class="s0">#%% 
+</span><span class="s1">bins = np.arange(</span><span class="s4">0</span><span class="s1">,df[</span><span class="s3">'age'</span><span class="s1">].max()+</span><span class="s4">5</span><span class="s1">,</span><span class="s4">5</span><span class="s1">)</span>
+<span class="s1">sb.histplot(data=df ,x=</span><span class="s3">'age'</span><span class="s1">,kde=</span><span class="s2">True</span><span class="s1">,bins=bins).set(title=</span><span class="s3">&quot;User Age Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">#### Observation 
+**Most of our users are between the ages of 25 and 40 .These are young adults and adults.** 
+</span><span class="s0">#%% md 
+</span><span class="s1">#### Question 1b 
+### What does user activity look like 
+</span><span class="s0">#%% md 
+</span><span class="s1">### Question 
+**Which stations recieve the highest   traffic from these users** 
+</span><span class="s0">#%% 
+#Find the number of stations</span>
+<span class="s1">df[</span><span class="s3">'start_station_name'</span><span class="s1">].unique()</span>
+<span class="s0">#%% md 
+</span><span class="s1">**We have 273 stations , it will be unneccesary to try to visualize all of them on one graph so lets select only the top 10 most visited stations** 
+</span><span class="s0">#%% 
+#Visualize the most visited stations</span>
+<span class="s1">most_visited_stations = df[</span><span class="s3">'start_station_name'</span><span class="s1">].value_counts().sort_values(ascending = </span><span class="s2">False</span><span class="s1">).head(</span><span class="s4">10</span><span class="s1">)</span>
+<span class="s1">most_visited_stations.plot.barh()</span>
+<span class="s1">plt.xlabel(</span><span class="s3">&quot;Number of users&quot;</span><span class="s1">)</span>
+<span class="s1">plt.ylabel(</span><span class="s3">&quot;Station Name&quot;</span><span class="s1">);</span>
+<span class="s0">#%% 
+#Visualize the stations for users below our interest to see if there are any points of interest</span>
+<span class="s1">most_visited_stations = df2[</span><span class="s3">'start_station_name'</span><span class="s1">].value_counts().sort_values(ascending = </span><span class="s2">False</span><span class="s1">).head(</span><span class="s4">10</span><span class="s1">)</span>
+<span class="s1">most_visited_stations.plot.barh()</span>
+<span class="s1">plt.xlabel(</span><span class="s3">&quot;Number of users&quot;</span><span class="s1">)</span>
+<span class="s1">plt.ylabel(</span><span class="s3">&quot;Station Name&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">#### Observation 
+**From these two graphs , it is observed that most of the stations are different.This might point out the stations where we would need to direct our marketing efforts more too, ie stations which get less of our desired user type** 
+</span><span class="s0">#%% md 
+</span><span class="s1">#### Question 
+**Which is the most common bike share option,full trip or not ?** 
+</span><span class="s0">#%% 
+</span><span class="s1">sb.countplot(data=df,x=</span><span class="s3">'bike_share_for_all_trip'</span><span class="s1">).set(title=</span><span class="s3">&quot;Full Trip Bike Share Preference&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">#### Observations 
+**Many long trip users opt to not share thier bike ride for the entire duration of the trip** 
+</span><span class="s0">#%% md 
+</span><span class="s1">### Discuss the distribution(s) of your variable(s) of interest. Were there any unusual points? Did you need to perform any transformations? 
+ 
+&gt; I discovered that most of our users are adults between the ages of 25 and 40. They are mostly male . 
+ &gt; Most users who take longer trip rides are on subscription. I also found out that most users do not bike share for the entire trip , possibly because most of the trips have a very short duration around 300 to 800 seconds. This begs the question to explore the type of activities our users might be using the bike sharing system. 
+ 
+ 
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this? 
+ 
+&gt; The frequency distribution of duration seconds was quite unusual because l expected a normal distribution.But it turned out to be left-skewed. 
+&gt; I removed a some columns which were not going to be useful to our investigation like co-ordinates, these would require extra work to find the place on a map and identify them .Instead l kept the station names as they would be a better indicator for user concentration 
+&gt; I had to transform the member birth year column into ages instead because the years on thier own were not very useful ,so  l calculated the ages of the users and used that to see the user age group range. 
+&gt; l also separated the data into two parts, df and df2, the first for people who take longer trips and the latter for people who take comparably shorter trips.This has allowed to specifically look at the attributes where our main interest lie, ie increasing the number of people who take longer trips 
+ 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Bivariate Exploration 
+</span><span class="s0">#%% md 
+</span><span class="s1">##### Question 
+Does gender have an influence on the  duration of trip 
+</span><span class="s0">#%% 
+#Plot a catplot to compare the relative concentration of genders across the time range</span>
+<span class="s1">sb.catplot(data=df, x=</span><span class="s3">'member_gender'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">).set(title=</span><span class="s3">&quot;Gender-Time Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Males take more longer trips than females. There is generrally a high concentration of males taking trips of varying times from the shortest times to the longest times . But as trip duration increases, we tend to have fewer females. For the longest trips there are very few people  and most of them are male. 
+ 
+</span><span class="s0">#%% 
+#Plot a catplot to see the same for user type</span>
+<span class="s1">sb.catplot(data=df,x=</span><span class="s3">'user_type'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">).set(title=</span><span class="s3">&quot;UserType-Time Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+We have a high concentration of subscribers in the longer bike duration range.As time duration increases, the concentration becomes more sparse for both user times, but mostly in customers , showing that thier numbers decrease as the time duration increases 
+</span><span class="s0">#%% 
+## Plot the same for bike share</span>
+<span class="s1">sb.catplot(data=df,x=</span><span class="s3">'bike_share_for_all_trip'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">).set(title=</span><span class="s3">&quot;FullTrip Bike Share-Time Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Most people dont share thier trips . As trip duration increases we tend to have fewer and fewer people sharing thier rides.But the decrease in number of people is more apperant in people who share bike rides than those who dont 
+</span><span class="s0">#%% md 
+</span><span class="s1">##### Question 
+**How does trip duration vary according to age** 
+</span><span class="s0">#%% 
+#plot a scatterplot see the correlation</span>
+<span class="s1">sb.regplot(data=df,x=</span><span class="s3">'age'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">).set(title=</span><span class="s3">&quot;Age-TimeDuration Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+There is no correlation between age and trip duration. The regression line is a horizontal straightline 
+</span><span class="s0">#%% md 
+</span><span class="s1">**Question** 
+What are the relative proportions of gender in our user types 
+</span><span class="s0">#%% 
+</span><span class="s1">age_gender = pd.crosstab(index=df[</span><span class="s3">'user_type'</span><span class="s1">],columns=df[</span><span class="s3">'member_gender'</span><span class="s1">])</span>
+<span class="s1">age_gender.plot(kind=</span><span class="s3">&quot;bar&quot;</span><span class="s1">,stacked=</span><span class="s2">True</span><span class="s1">,title=</span><span class="s3">&quot;User Type Genders&quot;</span><span class="s1">)</span>
+<span class="s1">plt.ylabel(</span><span class="s3">&quot;Number of Users&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+We have more females in the long bike duration range, for both customers and subscribers. 
+We know that we have more subscribers taking longer bike rides than customers and most of these subscribers are female. 
+How ever from a previous visualisation we saw that we have a greater concentration of males taking longer trips than females.We can analyse this furthur(multivariate analysis) by looking at the relationship bewteen user type, gender and time duration 
+</span><span class="s0">#%% 
+</span><span class="s1">first_group = df[( bikes[</span><span class="s3">'member_gender'</span><span class="s1">].str.contains(</span><span class="s3">&quot;Male&quot;</span><span class="s1">)  &amp; bikes[</span><span class="s3">&quot;user_type&quot;</span><span class="s1">].str.contains(</span><span class="s3">&quot;Subscriber&quot;</span><span class="s1">)  &amp; bikes[</span><span class="s3">'bike_share_for_all_trip'</span><span class="s1">].str.contains(</span><span class="s3">&quot;No&quot;</span><span class="s1">) )];</span>
+<span class="s1">sb.catplot(data=first_group,x=</span><span class="s3">'member_gender'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">).set(title=</span><span class="s3">&quot;FullTrip Bike Share-Time Distribution&quot;</span><span class="s1">);</span>
+<span class="s1">sec_group = df[(bikes[</span><span class="s3">'member_gender'</span><span class="s1">].str.contains(</span><span class="s3">&quot;Female&quot;</span><span class="s1">) &amp; bikes[</span><span class="s3">&quot;user_type&quot;</span><span class="s1">].str.contains(</span><span class="s3">&quot;Subscriber&quot;</span><span class="s1">) &amp; bikes[</span>
+    <span class="s3">'bike_share_for_all_trip'</span><span class="s1">].str.contains(</span><span class="s3">&quot;No&quot;</span><span class="s1">))];</span>
+<span class="s0"># sb.catplot(data=first_group, x='member_gender', y='duration_sec').set(title=&quot;FullTrip Bike Share-Time Distribution&quot;);</span>
+<span class="s0">#%% md 
+</span><span class="s1">### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset? 
+ 
+&gt; I saw that as the time duration increases, the concentration of users become more sparse.Females tend to get fewer for longer times. 
+&gt; There are more subscribers than customers who take longer bike rides.And the concentration of subscribers decrease less signficantly than those of customers as the time duration increases. It was also interesting to note that  although we have more female subscribers than male ,majority  of the few men subscribers are the ones who take the signficantly longer trips. 
+&gt; There is no correlation between age and trip duration however users between the ages of 25 and 40  tend to have longer trips 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Multivariate Exploration 
+</span><span class="s0">#%% md 
+</span><span class="s1">**Question** 
+Which users have relatively higher time duration : male subcribers or female subscribers ? 
+Which user type have relatively higher time duration [ x] who share bikes or [x] who dont share bikes ? 
+What is the average age of [x] users 
+Which stations are do these users go to most 
+</span><span class="s0">#%% md 
+</span><span class="s1">**Question** 
+What gender of users take relatively longer times ? 
+</span><span class="s0">#%% 
+</span><span class="s1">sb.catplot(data = df , x =</span><span class="s3">'member_gender'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">,hue=</span><span class="s3">'user_type'</span><span class="s1">).set(title=</span><span class="s3">&quot;User Types- Gender Distribution&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Males overal have take longer bikes rides.This is seen by thier concentration in the time range. 
+More male subscribers take longer bike rides 
+</span><span class="s0">#%% md 
+</span><span class="s1">**Question** 
+Does bike sharing option affect the user base composition ? 
+</span><span class="s0">#%% 
+</span><span class="s1">sb.catplot(data = df , x =</span><span class="s3">'member_gender'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">,hue=</span><span class="s3">'user_type'</span><span class="s1">,col=</span><span class="s3">'bike_share_for_all_trip'</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Female customers taking longer bike rides do not share the ride 
+There are more male subscribers who take longer trips and dont share the rides 
+ 
+</span><span class="s0">#%% 
+</span><span class="s1">sb.catplot(data=df, x =</span><span class="s3">'member_gender'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">,hue=</span><span class="s3">'user_type'</span><span class="s1">,kind=</span><span class="s3">'violin'</span><span class="s1">,col=</span><span class="s3">'bike_share_for_all_trip'</span><span class="s1">);</span>
+
+<span class="s0">#%% md 
+</span><span class="s1">**Observations** 
+Although we would want to have more users with the highest times, it is apperant that most of our users are concentrated below the 20000 second point and our efforts should be directed towards those 
+ 
+</span><span class="s0">#%% md 
+</span><span class="s1">**Question** 
+Which stations get the most number of male subscribers who dont share trips 
+</span><span class="s0">#%% 
+#Select the ideal male user group with all the relevant features</span>
+<span class="s1">ideal_males = df[( bikes[</span><span class="s3">'member_gender'</span><span class="s1">].str.contains(</span><span class="s3">&quot;Male&quot;</span><span class="s1">)  &amp; bikes[</span><span class="s3">&quot;user_type&quot;</span><span class="s1">].str.contains(</span><span class="s3">&quot;Subscriber&quot;</span><span class="s1">)  &amp; bikes[</span><span class="s3">'bike_share_for_all_trip'</span><span class="s1">].str.contains(</span><span class="s3">&quot;No&quot;</span><span class="s1">) )];</span>
+<span class="s0"># sb.catplot(data=station_list,x='member_gender',y='duration_sec').set(title=&quot;FullTrip Bike Share-Time Distribution&quot;);</span>
+<span class="s1">st = ideal_males[</span><span class="s3">'start_station_name'</span><span class="s1">].value_counts().sort_values(ascending = </span><span class="s2">False</span><span class="s1">).head(</span><span class="s4">10</span><span class="s1">)</span>
+<span class="s1">st.plot.barh();</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+Most of our target users get their bike rides on the different locations in Market street 
+</span><span class="s0">#%% 
+</span><span class="s1">age_dist = ideal_males[[</span><span class="s3">'age'</span><span class="s1">,</span><span class="s3">'duration_sec'</span><span class="s1">]]</span>
+<span class="s1">age_dist</span>
+<span class="s0">#%% 
+</span><span class="s1">sb.histplot(data=age_dist,x=</span><span class="s3">'age'</span><span class="s1">,y=</span><span class="s3">'duration_sec'</span><span class="s1">,bins=</span><span class="s4">10</span><span class="s1">).set(title=</span><span class="s3">&quot;Age Distribution Of Ideal Users&quot;</span><span class="s1">);</span>
+<span class="s0">#%% md 
+</span><span class="s1">**Observation** 
+There is a high concentration of our desired users between the age of 25 and 35.Males older than 40 have low probability of taking longer bike rides 
+</span><span class="s0">#%% md 
+</span>
+<span class="s0">#%% md 
+</span><span class="s1">### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest? 
+&gt; I observed that our users tend to become less and less as time duration increases but the rate of decrease in number of users is less for male subscribers between the ages of 25 and 35.Usually these males dont share thier trips.They usually go to stations in differnt locations on Market Street.So these are our target users.With who we can optimize to target our marketing in the identified location of thiers highest occurances 
+&gt; Users are mainly concentrated in short durations and our goals is to increase user density on the higher duration time scale by marketing to those people with similar traits or reletively similar attributes . 
+ 
+</span><span class="s0">#%% 
+</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Conclusions 
+&gt;You can write a summary of the main findings and reflect on the steps taken during the data exploration. 
+My research was to analyse the features common to users who take longer bike rides so that l can come up with a target persona that can be used by Ford Go to create a marketing campaign targeting these types of users.I found out that thes users are mainly male subscribers between the ages of 25 and 35 and most of them dont share bike trips. I also found out that Market Street stations recieve a high incidence of these users. 
+During my exploration l first removed data that was missing values in two important columns(member gender and age). This made up 4.5% of the data so it was not very signficant to the overall dataset.I then removed any irrelevant columns that did not contain the attributes of users or thier usage insights.From this stage l was also able to get a high level overview of the data l had and was able to group it into user attributes and usage insights. 
+My univariate exploration was based on trying to understand the distribution of attributes along the users of interest.So l first identified the appropriate time range to call long. Then went on to identify how user and usage attributes where distributed in this range. From this l was able to identify some traits that could be worth furthur consideration in our bivariate exploration.From this l found out that most of our users where adults between 25 and 40 and where mostly male. I also found out that very few people share rides. 
+In bivariate exploration , l then looked for relationships that existed between the attributes l identified earlier.Here it was interesting to note that as time duration increases the concentration of users become less and females become significantly fewer than males yet we had more females in the subscriber type than males .It was also interesting to note that age didnt have any effect on how long a person took a ride for. 
+&gt; From bivariate exploration l now knew which features affected high bike duration so l started combining them to see thier overall effect if they were combined in one user.Here thats l observed that  of our subscribers, the most prominent ones were males who took longer rides. Since age had no influence on bike duration, l analysed it independely to see the distribution of our users on an age scale.Then l made my final conclusions based upon the overall influence of combined features on a users. 
+</span></pre>
+</body>
+</html>
